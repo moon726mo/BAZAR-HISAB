@@ -408,8 +408,6 @@
   .picker-item .pr-view{ font-family:'JetBrains Mono', monospace; color:var(--green-2); font-size:0.82rem; white-space:nowrap; }
   .picker-item .pr-edit{ width:74px; padding:5px 7px; font-family:'JetBrains Mono', monospace; font-size:0.82rem; border-radius:6px; }
   .picker-item .pr-edit-unit{ width:auto; flex:0 0 auto; padding:5px 6px; font-size:0.82rem; border-radius:6px; font-family:'Hind Siliguri', sans-serif; }
-  .cat-del-btn{ background:none; border:none; color:var(--brick); font-size:1rem; cursor:pointer; padding:4px 6px; line-height:1; flex-shrink:0; }
-  .cat-del-btn:hover{ opacity:0.7; }
   #categoryPickerList .picker-item{ touch-action:none; user-select:none; -webkit-user-select:none; }
   #categoryPickerList .picker-item.cat-dragging{
     background:#FCF6E0; box-shadow:0 6px 16px var(--shadow); z-index:5;
@@ -678,6 +676,7 @@
 </div>
 
 <div id="pickerItemMenuPopup" class="item-menu-popup" style="display:none;" onclick="event.stopPropagation()"></div>
+<div id="categoryItemMenuPopup" class="item-menu-popup" style="display:none;" onclick="event.stopPropagation()"></div>
 
 <div id="categoryPickerModal" class="picker-overlay" onclick="if(event.target===this) closeCategoryPicker()">
   <div class="picker-sheet">
@@ -744,6 +743,8 @@
   let shopFilterCat = 'সব';
   let selectedItemCategory = ''; // category chosen in the "নতুন জিনিস যোগ করুন" form, via the category picker
   let categoryPickerFromShop = false; // true when the category picker was opened from the বাজার করুন item-picker's + button
+  let catMenuOpenName = null; // category name whose ⋮ menu (নাম পরিবর্তন/মুছুন) is open
+  let catMenuBtnEl = null; // the ⋮ button element the category popup is anchored to
 
   /* ---------- Google Sheet auto-sync (two-way) ---------- */
   const SCRIPT_URL_KEY = 'bazarHisab_scriptUrl_v1';
@@ -751,6 +752,7 @@
   let pushTimer = null;
   let isPulling = false;
   let isPushing = false;
+  let localEditCounter = 0; // পুল চলাকালীন লোকালি কোনো এডিট (যেমন rename/সেভ) হলো কিনা বোঝার জন্য
   let syncToastTimer = null;
 
   /* ---------- নোটিফিকেশন বেল (সিঙ্ক মেসেজ হিস্টরি) ----------
@@ -874,10 +876,20 @@
     }
     isPulling = true;
     setSyncStatus('⬇️ শিট থেকে আনা হচ্ছে...', 'busy');
+    const editCounterBeforePull = localEditCounter;
     try {
       const res = await fetch(scriptUrl + '?action=getAll');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+
+      // পুল চলাকালীন (fetch শেষ হওয়ার আগেই) যদি ইউজার কিছু এডিট/রিনেম/সেভ করে ফেলে,
+      // তাহলে শিট থেকে আসা (তখনও পুরনো) ডেটা দিয়ে ওভাররাইট না করে লোকাল পরিবর্তনটাই
+      // রাখা হচ্ছে — নাহলে "সেভ করলাম কিন্তু হলো না" মনে হয়ে বারবার ক্লিক করতে হতো।
+      if (localEditCounter !== editCounterBeforePull){
+        setSyncStatus('✅ সিঙ্ক করা আছে', 'ok');
+        queuePushToSheet();
+        return;
+      }
 
       const incomingList = data.priceList || {};
       const incomingHistory = data.priceHistory || {};
@@ -924,6 +936,7 @@
   }
 
   function queuePushToSheet(){
+    localEditCounter++;
     if (!scriptUrl) return;
     if (!navigator.onLine){
       setSyncStatus('📴 অফলাইনে সেভ হয়েছে, নেট ফিরলে অটো সিঙ্ক হবে', 'err');
@@ -1089,6 +1102,7 @@
     const overlay = document.getElementById('categoryPickerModal');
     const newCatInput = document.getElementById('newCategoryInput');
     newCatInput.value = '';
+    closeCategoryItemMenu();
     renderCategoryPickerList();
     overlay.classList.add('open');
     document.body.classList.add('no-scroll');
@@ -1098,6 +1112,7 @@
   function closeCategoryPicker(){
     document.getElementById('categoryPickerModal').classList.remove('open');
     document.body.classList.remove('no-scroll');
+    closeCategoryItemMenu();
   }
 
   function renderCategoryPickerList(){
@@ -1114,7 +1129,7 @@
       const sel = c === activeCat ? ' selected' : '';
       return `<div class="picker-item${sel}" data-cat="${c.replace(/"/g,'&quot;')}" onclick="pickCategory('${safe}')" onpointerdown="startCategoryDrag(event, '${safe}')">
         <span class="nm">${c}</span>
-        <button type="button" class="cat-del-btn" title="ক্যাটাগরি মুছুন" onclick="event.stopPropagation(); deleteCategory('${safe}')">✕</button>
+        <button type="button" class="picker-dots-btn" title="নাম পরিবর্তন, মুছুন" onclick="event.stopPropagation(); toggleCategoryItemMenu(this, '${safe}')">⋮</button>
       </div>`;
     }).join('');
   }
@@ -1124,7 +1139,7 @@
   let catDragJustMoved = false; // থ্রেশহোল্ড পার হয়ে সত্যিকারের ড্র্যাগ হলে true — পরের click ইভেন্ট (pickCategory) ইগনোর করার জন্য
 
   function startCategoryDrag(e, name){
-    if (e.target.closest('.cat-del-btn')) return; // ✕ বাটনে চাপলে ড্র্যাগ শুরু হবে না
+    if (e.target.closest('.picker-dots-btn')) return; // ⋮ বাটনে চাপলে ড্র্যাগ শুরু হবে না
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const itemEl = e.currentTarget;
     const listEl = document.getElementById('categoryPickerList');
@@ -1225,6 +1240,105 @@
     if (trendFilterCat === name){ trendFilterCat = 'সব'; }
     if (shopFilterCat === name){ shopFilterCat = 'সব'; }
 
+    closeCategoryItemMenu();
+    renderCategoryPickerList();
+    renderPriceList();
+    renderTrendList();
+    renderSelectDropdown();
+    renderCatChips('itemPickerCatChips', shopFilterCat, 'setItemPickerCatFilter', 'openCategoryPicker(true)');
+  }
+
+  /* ---------- ক্যাটাগরির ⋮ মেনু (নাম পরিবর্তন / মুছুন) ---------- */
+  function toggleCategoryItemMenu(btnEl, name){
+    if (catMenuOpenName === name){
+      closeCategoryItemMenu();
+      return;
+    }
+    catMenuOpenName = name;
+    catMenuBtnEl = btnEl;
+    renderCategoryItemMenuPopup();
+  }
+
+  function closeCategoryItemMenu(){
+    catMenuOpenName = null;
+    catMenuBtnEl = null;
+    const popup = document.getElementById('categoryItemMenuPopup');
+    if (popup) popup.style.display = 'none';
+  }
+
+  function renderCategoryItemMenuPopup(){
+    const name = catMenuOpenName;
+    const popup = document.getElementById('categoryItemMenuPopup');
+    if (!popup) return;
+    if (!name || !getCategories().includes(name) || !catMenuBtnEl){ closeCategoryItemMenu(); return; }
+    const safe = name.replace(/'/g,"\\'");
+    popup.innerHTML = `
+      <div class="menu-row" onclick="event.stopPropagation(); editCategoryNamePopup('${safe}')">
+        <span class="menu-label">নাম পরিবর্তন</span>
+        <span class="menu-value" id="catPopupNameVal">${name}</span>
+      </div>
+      <div class="item-menu-split">
+        <div class="split-btn danger" onclick="event.stopPropagation(); deleteCategory('${safe}')">ডিলিট</div>
+        <div class="split-btn save" onclick="event.stopPropagation(); saveCategoryRename('${safe}')">সেভ</div>
+      </div>
+    `;
+    positionPickerPopup(popup, catMenuBtnEl);
+  }
+
+  document.addEventListener('click', function(e){
+    const popup = document.getElementById('categoryItemMenuPopup');
+    if (!popup || popup.style.display === 'none') return;
+    if (!popup.contains(e.target)) closeCategoryItemMenu();
+  });
+
+  // নাম পরিবর্তন popup-এর ভেতরেই শুধু ইনপুটে স্টেজ হয় — Enter/ব্লার না দেওয়া পর্যন্ত
+  // আসল রিনেম (saveCategoryRename) ঘটে না।
+  function editCategoryNamePopup(name){
+    const view = document.getElementById('catPopupNameVal');
+    if (!view) return;
+    const safe = name.replace(/'/g,"\\'");
+    view.outerHTML = `<input type="text" class="pr-edit" id="catPopupNameEdit"
+        value="${name}"
+        onclick="event.stopPropagation()"
+        onkeydown="if(event.key==='Enter'){event.stopPropagation(); saveCategoryRename('${safe}');}">`;
+    const input = document.getElementById('catPopupNameEdit');
+    input.focus();
+    input.select();
+    positionPickerPopup(document.getElementById('categoryItemMenuPopup'), catMenuBtnEl);
+  }
+
+  function saveCategoryRename(oldName){
+    const input = document.getElementById('catPopupNameEdit');
+    if (!input){ closeCategoryItemMenu(); return; }
+    const newName = input.value.trim();
+    if (!newName){ alert('ক্যাটাগরির নাম লিখুন'); return; }
+
+    if (newName !== oldName){
+      if (getCategories().includes(newName)){
+        alert(`"${newName}" নামে ইতিমধ্যে একটি ক্যাটাগরি আছে`);
+        return;
+      }
+
+      Object.keys(priceList).forEach(k => {
+        if ((priceList[k].category || DEFAULT_CAT) === oldName){
+          priceList[k].category = newName;
+        }
+      });
+      customCategories = customCategories.filter(c => c !== oldName);
+      if (!customCategories.includes(newName)) customCategories.push(newName);
+      categoryOrder = categoryOrder.map(c => c === oldName ? newName : c);
+      savePriceList();
+      saveCategoryList();
+      saveCategoryOrder();
+      queuePushToSheet();
+
+      if (selectedItemCategory === oldName){ selectedItemCategory = newName; updateItemCategoryBtnLabel(); }
+      if (priceFilterCat === oldName){ priceFilterCat = newName; }
+      if (trendFilterCat === oldName){ trendFilterCat = newName; }
+      if (shopFilterCat === oldName){ shopFilterCat = newName; }
+    }
+
+    closeCategoryItemMenu();
     renderCategoryPickerList();
     renderPriceList();
     renderTrendList();
@@ -1797,6 +1911,10 @@
     const it = priceList[name];
     const safe = name.replace(/'/g,"\\'");
     popup.innerHTML = `
+      <div class="menu-row" onclick="event.stopPropagation(); editPickerNamePopup('${safe}')">
+        <span class="menu-label">নাম পরিবর্তন</span>
+        <span class="menu-value" id="popupNameVal">${name}</span>
+      </div>
       <div class="menu-row" onclick="event.stopPropagation(); editPickerUnitPopup('${safe}')">
         <span class="menu-label">একক</span>
         <span class="menu-value" id="popupUnitVal">${it.unit}</span>
@@ -1845,6 +1963,21 @@
     renderPickerList();
   }
 
+  // Editing নাম inside the popup only stages the change in the input — nothing is
+  // committed to priceList until "সেভ" is tapped (savePopupChanges করে rename করে)।
+  function editPickerNamePopup(name){
+    const view = document.getElementById('popupNameVal');
+    if (!view || !priceList[name]) return;
+    view.outerHTML = `<input type="text" class="pr-edit" id="popupNameEdit"
+        value="${name}"
+        onclick="event.stopPropagation()"
+        onkeydown="if(event.key==='Enter'){event.stopPropagation(); savePopupChanges('${name.replace(/'/g,"\\'")}');}">`;
+    const input = document.getElementById('popupNameEdit');
+    input.focus();
+    input.select();
+    positionPickerPopup(document.getElementById('pickerItemMenuPopup'), pickerMenuBtnEl);
+  }
+
   // Editing একক/দাম inside the popup only stages the change in the input/select.
   // Nothing is saved to priceList or re-rendered until "সেভ" is tapped —
   // this keeps the popup's DOM (and its anchor button) untouched, so its position stays fixed.
@@ -1875,26 +2008,51 @@
     positionPickerPopup(document.getElementById('pickerItemMenuPopup'), pickerMenuBtnEl);
   }
 
-  // Commits any staged একক/দাম edits and closes the popup.
+  // Commits any staged নাম/একক/দাম edits and closes the popup.
   function savePopupChanges(name){
     if (!priceList[name]){ closePickerItemMenu(); return; }
+    let currentKey = name;
+
+    const nameInput = document.getElementById('popupNameEdit');
+    if (nameInput){
+      const newName = nameInput.value.trim();
+      if (newName && newName !== currentKey){
+        if (priceList[newName]){
+          alert('এই নামে ইতিমধ্যে একটা জিনিস আছে');
+        } else {
+          priceList[newName] = priceList[currentKey];
+          delete priceList[currentKey];
+          if (priceHistory[currentKey]){
+            priceHistory[newName] = priceHistory[currentKey];
+            delete priceHistory[currentKey];
+          }
+          if (quantities[currentKey] !== undefined){
+            quantities[newName] = quantities[currentKey];
+            delete quantities[currentKey];
+          }
+          if (selectedShopItem === currentKey) selectedShopItem = newName;
+          currentKey = newName;
+        }
+      }
+    }
+
     const unitSel = document.getElementById('popupUnitEdit');
     if (unitSel){
-      priceList[name].unit = unitSel.value;
+      priceList[currentKey].unit = unitSel.value;
     }
     const priceInput = document.getElementById('popupPriceEdit');
     if (priceInput){
       const newPrice = parseFloat(priceInput.value);
       if (!isNaN(newPrice) && newPrice >= 0){
-        priceList[name].price = newPrice;
-        recordPriceHistory(name, newPrice);
+        priceList[currentKey].price = newPrice;
+        recordPriceHistory(currentKey, newPrice);
       }
     }
     savePriceList();
     queuePushToSheet();
-    renderPickerList();
     renderPriceList();
     renderSelectDropdown();
+    renderPickerList();
     closePickerItemMenu();
   }
 
