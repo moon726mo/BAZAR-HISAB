@@ -262,11 +262,12 @@
   }
 
   .sync-toast{
-    position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-8px);
+    position:fixed; bottom:calc(70px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%) translateY(8px);
     display:flex; align-items:center; gap:10px; z-index:100;
     background:#2A3A28; border-radius:20px; padding:8px 16px;
     box-shadow:0 10px 24px -10px rgba(0,0,0,0.35);
     opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease;
+    max-width:calc(100% - 32px); text-align:center;
   }
   .sync-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .sync-status{ font-size:0.8rem; color:#fff; font-weight:500; }
@@ -352,6 +353,13 @@
   .picker-item .pr-edit-unit{ width:auto; flex:0 0 auto; padding:5px 6px; font-size:0.82rem; border-radius:6px; font-family:'Hind Siliguri', sans-serif; }
   .cat-del-btn{ background:none; border:none; color:var(--brick); font-size:1rem; cursor:pointer; padding:4px 6px; line-height:1; flex-shrink:0; }
   .cat-del-btn:hover{ opacity:0.7; }
+  #categoryPickerList .picker-item{ touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+  #categoryPickerList .picker-item.cat-dragging{
+    background:#FCF6E0; box-shadow:0 6px 16px var(--shadow); z-index:5;
+    border-radius:12px; border-bottom-color:transparent;
+  }
+  #categoryPickerList .picker-item.cat-drop-before{ border-top:2.5px solid var(--mustard); }
+  #categoryPickerList .picker-item.cat-drop-after{ border-bottom:2.5px solid var(--mustard); }
   .picker-dots-btn{
     background:none; border:none; color:#7a8a76; font-size:1.3rem; cursor:pointer;
     padding:6px 12px; line-height:1; flex-shrink:0; border-radius:8px;
@@ -426,7 +434,7 @@
         </button>
         <div class="qty-unit-box" style="flex:1 1 0;">
           <input type="number" id="selectQty" min="0" step="0.01" placeholder="যেমন: 5">
-          <span id="selectUnitBadge" onclick="toggleSelectQtyUnit()">একক</span>
+          <span id="selectUnitBadge" onpointerdown="event.preventDefault()" onclick="toggleSelectQtyUnit()">একক</span>
         </div>
       </div>
 
@@ -459,7 +467,7 @@
         <button class="btn btn-ghost" id="copyNoPriceBtn" onclick="copyNameQtyOnly()">📝 কপি (দামছাড়া)</button>
         <button class="btn btn-ghost" onclick="window.print()">🖨️ প্রিন্ট / PDF</button>
         <button class="btn btn-ghost" onclick="switchTab(3)">🕘 হিস্টরি</button>
-        <button class="btn btn-ghost" onclick="switchTab(4)">📈 প্রাইস ট্রেন্ড</button>
+        <button class="btn btn-ghost" onclick="switchTab(4)">📈 মূল্য বৃদ্ধি</button>
         <button class="btn btn-danger" onclick="clearQuantities()">🗑️ ক্লিয়ার</button>
       </div>
     </div>
@@ -485,7 +493,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:6px;">
           <button type="button" class="picker-close" style="position:static;" onclick="switchTab(2)" aria-label="ফিরে যান">←</button>
-          <div class="picker-title">📈 প্রাইস ট্রেন্ড</div>
+          <div class="picker-title">📈 মূল্য বৃদ্ধি</div>
         </div>
       </div>
       <div id="trendTopMoversBox"></div>
@@ -555,11 +563,13 @@
   const PRICE_KEY = 'bazarHisab_priceList_v2';
   const HISTORY_KEY = 'bazarHisab_priceHistory_v1';
   const CATEGORY_KEY = 'bazarHisab_categoryList_v1';
+  const CATEGORY_ORDER_KEY = 'bazarHisab_categoryOrder_v1';
   const SHOP_LOG_KEY = 'bazarHisab_shoppingLog_v1';
   const DEFAULT_CAT = 'সাধারণ';
   let priceList = JSON.parse(localStorage.getItem(PRICE_KEY) || '{}'); // { name: {unit, price, category} }
   let priceHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); // { name: [{date:'YYYY-MM-DD', price}] }
   let customCategories = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '[]'); // category names saved even before any item uses them
+  let categoryOrder = JSON.parse(localStorage.getItem(CATEGORY_ORDER_KEY) || '[]'); // user's drag-reordered category sequence
   let shoppingLog = JSON.parse(localStorage.getItem(SHOP_LOG_KEY) || '[]'); // [{id, dateLabel, grand, categories:[{category, catTotal, items:[{name,qty,unit,price,sub}]}]}]
   let quantities = {}; // { name: qty } -- current selection in the shopping tab
   let otherItems = []; // [{id, text}] -- free-text "অন্যান্য" entries in the shopping tab
@@ -755,12 +765,23 @@
   function saveCategoryList(){
     localStorage.setItem(CATEGORY_KEY, JSON.stringify(customCategories));
   }
+  function saveCategoryOrder(){
+    localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(categoryOrder));
+  }
   function getCategories(){
     const set = new Set([
       ...Object.values(priceList).map(it => it.category || DEFAULT_CAT),
       ...customCategories
     ]);
-    return Array.from(set).sort();
+    const all = Array.from(set);
+    let ordered = categoryOrder.filter(c => all.includes(c));
+    const newOnes = all.filter(c => !ordered.includes(c)).sort();
+    if (newOnes.length){
+      ordered = [...ordered, ...newOnes];
+      categoryOrder = ordered;
+      saveCategoryOrder(); // নতুন ক্যাটাগরি পেলে তার পজিশন স্থায়ীভাবে সেভ করে রাখা (self-healing)
+    }
+    return ordered;
   }
 
   function switchTab(n){
@@ -835,11 +856,99 @@
     list.innerHTML = cats.map(c => {
       const safe = c.replace(/'/g,"\\'");
       const sel = c === activeCat ? ' selected' : '';
-      return `<div class="picker-item${sel}" onclick="pickCategory('${safe}')">
+      return `<div class="picker-item${sel}" data-cat="${c.replace(/"/g,'&quot;')}" onclick="pickCategory('${safe}')" onpointerdown="startCategoryDrag(event, '${safe}')">
         <span class="nm">${c}</span>
         <button type="button" class="cat-del-btn" title="ক্যাটাগরি মুছুন" onclick="event.stopPropagation(); deleteCategory('${safe}')">✕</button>
       </div>`;
     }).join('');
+  }
+
+  /* ---------- ক্যাটাগরি ড্র্যাগ-রিঅর্ডার (কোনো আলাদা হ্যান্ডেল আইকন নেই, পুরো রো-টাই ধরে টানা যায়) ---------- */
+  let catDrag = null; // active drag state, or null when not dragging
+  let catDragJustMoved = false; // থ্রেশহোল্ড পার হয়ে সত্যিকারের ড্র্যাগ হলে true — পরের click ইভেন্ট (pickCategory) ইগনোর করার জন্য
+
+  function startCategoryDrag(e, name){
+    if (e.target.closest('.cat-del-btn')) return; // ✕ বাটনে চাপলে ড্র্যাগ শুরু হবে না
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const itemEl = e.currentTarget;
+    const listEl = document.getElementById('categoryPickerList');
+    catDrag = {
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      itemEl, listEl, name,
+      dragging: false,
+      dropTargetEl: null,
+      dropBefore: true
+    };
+    itemEl.addEventListener('pointermove', onCategoryDragMove);
+    itemEl.addEventListener('pointerup', onCategoryDragEnd);
+    itemEl.addEventListener('pointercancel', onCategoryDragEnd);
+  }
+
+  function onCategoryDragMove(e){
+    if (!catDrag || e.pointerId !== catDrag.pointerId) return;
+    const dy = e.clientY - catDrag.startY;
+
+    if (!catDrag.dragging){
+      if (Math.abs(dy) < 8) return; // ছোটখাটো নড়াচড়াকে ট্যাপ হিসেবেই ধরা হবে, ড্র্যাগ না
+      catDrag.dragging = true;
+      catDragJustMoved = true;
+      catDrag.itemEl.setPointerCapture(e.pointerId);
+      catDrag.itemEl.classList.add('cat-dragging');
+    }
+
+    e.preventDefault();
+    catDrag.itemEl.style.transform = `translateY(${dy}px)`;
+
+    // পয়েন্টার কোন সিবলিং-এর উপরে আছে সেটা বের করে drop-indicator দেখানো
+    const siblings = Array.from(catDrag.listEl.children).filter(el => el !== catDrag.itemEl);
+    if (catDrag.dropTargetEl){
+      catDrag.dropTargetEl.classList.remove('cat-drop-before', 'cat-drop-after');
+    }
+    catDrag.dropTargetEl = null;
+    for (const sib of siblings){
+      const r = sib.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      if (e.clientY < mid){
+        sib.classList.add('cat-drop-before');
+        catDrag.dropTargetEl = sib;
+        catDrag.dropBefore = true;
+        break;
+      }
+    }
+    if (!catDrag.dropTargetEl && siblings.length){
+      const last = siblings[siblings.length - 1];
+      last.classList.add('cat-drop-after');
+      catDrag.dropTargetEl = last;
+      catDrag.dropBefore = false;
+    }
+  }
+
+  function onCategoryDragEnd(e){
+    if (!catDrag || e.pointerId !== catDrag.pointerId) return;
+    const { itemEl, listEl, dragging, dropTargetEl, dropBefore } = catDrag;
+
+    itemEl.removeEventListener('pointermove', onCategoryDragMove);
+    itemEl.removeEventListener('pointerup', onCategoryDragEnd);
+    itemEl.removeEventListener('pointercancel', onCategoryDragEnd);
+
+    if (dropTargetEl) dropTargetEl.classList.remove('cat-drop-before', 'cat-drop-after');
+    itemEl.classList.remove('cat-dragging');
+    itemEl.style.transform = '';
+
+    if (dragging && dropTargetEl){
+      if (dropBefore) listEl.insertBefore(itemEl, dropTargetEl);
+      else listEl.insertBefore(itemEl, dropTargetEl.nextSibling);
+
+      categoryOrder = Array.from(listEl.querySelectorAll('.picker-item')).map(el => el.dataset.cat);
+      saveCategoryOrder();
+
+      renderPriceList();
+      renderTrendList();
+      renderSelectDropdown();
+      renderCatChips('itemPickerCatChips', shopFilterCat, 'setItemPickerCatFilter', 'openCategoryPicker(true)');
+    }
+    catDrag = null;
   }
 
   function deleteCategory(name){
@@ -1326,6 +1435,7 @@
     const qtyInput = document.getElementById('selectQty');
     if (qtyInput){
       qtyInput.placeholder = `${getQtyUnitBadgeInfo(name).label} লিখুন`;
+      if (document.activeElement === qtyInput) qtyInput.focus();
     }
     updateLivePreview();
   }
@@ -1662,11 +1772,16 @@
   }
 
   function sortCatsOtherLast(cats){
+    // ক্যাটাগরি পিকারে ড্র্যাগ করে যেই সিরিয়াল সেট করা হয়েছে (categoryOrder),
+    // ঠিক সেই সিরিয়াল অনুযায়ী এখানে জিনিসগুলো সাজানো হয় — লিস্ট, কপি ও হিস্টরি সব জায়গায়।
+    const order = getCategories();
     return cats.sort((a, b) => {
-      if (a === 'অন্যান্য' && b === 'অন্যান্য') return 0;
-      if (a === 'অন্যান্য') return 1;
-      if (b === 'অন্যান্য') return -1;
-      return a.localeCompare(b);
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
     });
   }
 
