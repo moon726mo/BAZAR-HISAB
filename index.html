@@ -924,6 +924,7 @@
       renderSelectDropdown();
       renderSummary();
       renderHistoryList();
+      renderChecklistPageList();
 
       setSyncStatus('✅ সিঙ্ক করা আছে', 'ok');
     } catch (err) {
@@ -1465,7 +1466,7 @@
   }
 
   function buildTrendHTML(name, histOverride){
-    const hist = histOverride || priceHistory[name] || [];
+    const hist = histOverride || getHistFromLog(name);
     if (hist.length < 2){
       return `<div class="empty-note" style="padding:4px 0;">
         এখনো যথেষ্ট তথ্য নেই — দাম আরও একবার বদলালে (বা কয়েকদিন পর) এখানে ট্রেন্ড গ্রাফ দেখা যাবে।
@@ -1541,12 +1542,46 @@
     return hist.filter(p => p.date >= cutoffISO);
   }
 
+  // মূল্য বৃদ্ধি (ট্রেন্ড) পেজের সব হিসাব এখন শুধু আসল "হিস্ট্রি" (shoppingLog, অর্থাৎ
+  // যেই এন্ট্রিগুলো আসলেই বাজার/শপিং করে সেভ করা হয়েছে) থেকে বের করা হয় — দাম এডিট/টেস্ট
+  // করার সময় priceHistory-তে যা রেকর্ড হয়, সেটা আর ট্রেন্ডে যোগ হয় না। ফলে হিস্ট্রি থেকে
+  // একটা এন্ট্রি ডিলিট করলে ট্রেন্ডও সাথে সাথে আপডেট হয়ে যাবে।
+  function getHistFromLog(name){
+    const entries = shoppingLog
+      .filter(e => Array.isArray(e.categories) && e.categories.length)
+      .slice()
+      .sort((a, b) => a.id - b.id); // পুরনো থেকে নতুন — সময় অনুযায়ী
+
+    const hist = [];
+    let lastDate = null;
+    entries.forEach(e => {
+      let price = null;
+      for (const c of e.categories){
+        if (c.category === 'অন্যান্য (দাম ছাড়া)') continue; // এগুলোর দাম থাকে না
+        const found = (c.items || []).find(it => it.name === name && it.price > 0);
+        if (found){ price = found.price; break; }
+      }
+      if (price === null) return;
+
+      const d = new Date(e.id);
+      const dateISO = d.toISOString().slice(0, 10);
+      const point = { date: dateISO, price };
+      if (lastDate === dateISO){
+        // একই দিনে একাধিক শপিং এন্ট্রি হলে সময় দেখিয়ে আলাদা করা হয়
+        point.time = d.toLocaleTimeString('bn-BD', { hour:'2-digit', minute:'2-digit' });
+      }
+      lastDate = dateISO;
+      hist.push(point);
+    });
+    return hist;
+  }
+
   function getFilteredHist(name){
-    return filterHistoryByRange(priceHistory[name] || [], trendTimeRange);
+    return filterHistoryByRange(getHistFromLog(name), trendTimeRange);
   }
 
   function getTrendPct(name, histOverride){
-    const hist = histOverride || priceHistory[name] || [];
+    const hist = histOverride || getHistFromLog(name);
     if (hist.length < 2) return null;
     const first = hist[0].price, last = hist[hist.length - 1].price;
     const diff = last - first;
