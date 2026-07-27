@@ -42,7 +42,7 @@
   h1,h2,h3, .brand{ font-family:'Baloo Da 2', 'Hind Siliguri', sans-serif; }
   .wrap{ max-width:920px; margin:0 auto; }
 
-  header.top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:20px; position:relative; }
+  header.top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:20px; position:relative; z-index:200; }
   .menu-btn{
     position:absolute; left:0; top:50%; transform:translateY(-50%); border:none; background:none;
     font-size:1.5rem; color:var(--green); cursor:pointer; padding:6px 8px; line-height:1;
@@ -50,6 +50,15 @@
   .menu-btn:hover{ color:var(--green-2); }
   .notif-corner{ position:absolute; right:0; top:50%; transform:translateY(-50%); }
   .notif-corner .menu-btn.notif-btn{ position:static; transform:none; font-size:1.3rem; }
+  .menu-corner{ position:absolute; left:0; top:50%; transform:translateY(-50%); }
+  .menu-corner .menu-btn.gear-btn{ position:static; transform:none; }
+  .menu-corner .notif-dropdown{ left:0; right:auto; text-align:left; }
+  .menu-dropdown-item{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left; border:none;
+    background:none; font-family:'Hind Siliguri', sans-serif; font-weight:600; font-size:0.9rem;
+    color:var(--ink); padding:10px 10px; border-radius:8px; cursor:pointer;
+  }
+  .menu-dropdown-item:hover{ background:#F1EEE2; }
   .notif-badge{
     position:absolute; top:3px; right:2px; width:9px; height:9px; border-radius:50%;
     background:var(--brick); border:1.5px solid #FEFDF9;
@@ -193,6 +202,10 @@
   .empty-note{ color:#9a9a86; font-style:italic; padding:14px 4px; }
   .history-entry{
     border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; background:#fff;
+    transition:background-color .15s ease, border-color .15s ease;
+  }
+  .history-entry[open]{
+    background:#F6F3E7; border-color:var(--green-2);
   }
   .history-entry summary{
     display:flex; justify-content:space-between; align-items:center; cursor:pointer;
@@ -201,6 +214,10 @@
   .history-entry summary::-webkit-details-marker{ display:none; }
   .history-entry .hist-date{ color:var(--ink); }
   .history-entry .hist-total{ font-family:'JetBrains Mono', monospace; color:var(--green-2); }
+  .checklist-grand-total{
+    text-align:center; font-family:'JetBrains Mono', monospace; font-weight:700;
+    font-size:1.05rem; color:var(--green-2); padding:2px 16px 8px;
+  }
   .hist-checklist-badge{
     display:inline-block; font-family:'JetBrains Mono', monospace; font-weight:700; font-size:0.72rem;
     color:var(--green-2); background:#EAF3EC; border-radius:20px; padding:2px 8px; margin-left:4px; vertical-align:middle;
@@ -279,9 +296,7 @@
 
   .actions-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
   .actions-row .btn{ min-width:0; }
-  @media (min-width:480px){
-    .actions-row{ grid-template-columns:repeat(3, 1fr); }
-  }
+  .actions-row .btn:nth-child(3){ grid-column:1 / -1; }
 
   @media print{
     .bottom-nav, header.top, .item-grid, .actions-row{ display:none !important; }
@@ -345,12 +360,28 @@
   @keyframes sheetDown{ from{ transform:translateY(-18px); opacity:0.7; } to{ transform:translateY(0); opacity:1; } }
   .picker-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 46px 8px 16px; }
   .picker-title{ font-family:'Baloo Da 2'; font-weight:700; color:var(--green); font-size:1.05rem; }
+  #checklistTitleText{ cursor:pointer; border-bottom:1px dashed var(--line); }
+  .checklist-title-input{
+    font-family:'Baloo Da 2'; font-weight:700; color:var(--green); font-size:1.05rem;
+    border:1.5px solid var(--green-2); border-radius:6px; padding:2px 6px; width:100%;
+  }
   .picker-close{
     border:none; background:#F1EEE2; color:var(--ink); width:30px; height:30px;
     border-radius:50%; cursor:pointer; font-size:0.95rem; line-height:1;
     position:absolute; top:14px; right:16px; z-index:5;
   }
   .picker-close:hover{ background:#E7E2D2; }
+  .hist-add-checklist-btn{
+    border:none; background:var(--green); color:#fff; width:22px; height:22px;
+    border-radius:50%; cursor:pointer; font-size:0.85rem; line-height:1; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .hist-add-checklist-btn:hover{ opacity:0.85; }
+  .cl-page-remove-btn{
+    background:none; border:none; color:var(--brick); font-size:1rem; font-weight:700;
+    cursor:pointer; padding:2px 6px 2px 0; line-height:1; vertical-align:middle;
+  }
+  .cl-page-remove-btn:hover{ opacity:0.7; }
   .picker-search-wrap{ padding:4px 16px 10px; }
   .picker-search{
     width:100%; padding:11px 14px; border-radius:12px; border:1.5px solid var(--line);
@@ -484,7 +515,16 @@
 <div class="wrap">
 
   <header class="top">
-    <button type="button" class="menu-btn" id="headerSyncBtn" onclick="openSyncSettings()" aria-label="সিঙ্ক">⚙️</button>
+    <div class="menu-corner">
+      <button type="button" class="menu-btn gear-btn" id="headerMenuBtn" onclick="toggleGearDropdown()" aria-label="মেনু">☰</button>
+      <div id="gearDropdown" class="notif-dropdown">
+        <button type="button" class="menu-dropdown-item" onclick="toggleGearDropdown(); switchTab(2);">🏠 হোম</button>
+        <button type="button" class="menu-dropdown-item" onclick="toggleGearDropdown(); switchTab(5);">✅ চেকলিস্ট</button>
+        <button type="button" class="menu-dropdown-item" onclick="toggleGearDropdown(); switchTab(4);">📈 মূল্য বৃদ্ধি</button>
+        <button type="button" class="menu-dropdown-item" onclick="toggleGearDropdown(); switchTab(3);">🕘 হিস্টরি</button>
+        <button type="button" class="menu-dropdown-item" onclick="toggleGearDropdown(); openSyncSettings();">🔗 URL সিঙ্ক</button>
+      </div>
+    </div>
     <div class="brand">🧺 বাজার <span>হিসাব</span></div>
     <div class="notif-corner">
       <button type="button" class="menu-btn notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" aria-label="নোটিফিকেশন">
@@ -545,9 +585,6 @@
       <div class="actions-row">
         <button class="btn btn-ghost" id="copyWithPriceBtn" onclick="copySummary()">📋 কপি (দামসহ)</button>
         <button class="btn btn-ghost" id="copyNoPriceBtn" onclick="copyNameQtyOnly()">📝 কপি (দামছাড়া)</button>
-        <button class="btn btn-ghost" onclick="window.print()">🖨️ প্রিন্ট / PDF</button>
-        <button class="btn btn-ghost" onclick="switchTab(3)">🕘 হিস্টরি</button>
-        <button class="btn btn-ghost" onclick="switchTab(4)">📈 মূল্য বৃদ্ধি</button>
         <button class="btn btn-danger" onclick="clearQuantities()">🗑️ ক্লিয়ার</button>
       </div>
     </div>
@@ -559,9 +596,11 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="display:flex; align-items:center; gap:6px;">
           <button type="button" class="picker-close" style="position:static;" onclick="switchTab(2)" aria-label="ফিরে যান">←</button>
-          <div class="picker-title">🕘 বাজার হিস্টরি</div>
+          <div class="picker-title">হিস্টরি</div>
         </div>
-        <button type="button" class="btn btn-ghost" onclick="clearAllHistory()">🗑️ সব মুছুন</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-ghost" style="background:transparent; border:none; box-shadow:none;" onclick="clearAllHistory()">🗑️</button>
+        </div>
       </div>
       <div id="historyListBox"></div>
     </div>
@@ -585,6 +624,22 @@
           placeholder="জিনিসের নাম দিয়ে খুঁজুন..." oninput="renderTrendList()">
       </div>
       <div id="trendListBox"></div>
+    </div>
+  </div>
+
+  <!-- TAB 5: Checklist Page -->
+  <div class="tabpage" id="tabPage5">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button type="button" class="picker-close" style="position:static;" onclick="switchTab(2)" aria-label="ফিরে যান">←</button>
+          <div class="picker-title">চেকলিস্ট</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-primary" style="width:auto; padding:8px 14px; font-size:0.85rem;" onclick="createNewChecklistEntry()" aria-label="নতুন চেকলিস্ট">➕ যোগ</button>
+        </div>
+      </div>
+      <div id="checklistPageListBox"></div>
     </div>
   </div>
 
@@ -642,9 +697,10 @@
 <div id="checklistModal" class="picker-overlay" onclick="if(event.target===this) closeChecklistModal()">
   <div class="picker-sheet">
     <div class="picker-head">
-      <div class="picker-title">✅ চেকলিস্ট</div>
+      <div class="picker-title" id="checklistTitleText" onclick="startEditChecklistTitle(this)">✅ চেকলিস্ট</div>
       <button type="button" class="picker-close" onclick="closeChecklistModal()">✕</button>
     </div>
+    <div id="checklistGrandTotal" class="checklist-grand-total"></div>
     <div id="checklistProgressWrap" class="checklist-progress-wrap">
       <div class="checklist-progress-track"><div id="checklistProgressBar" class="checklist-progress-bar"></div></div>
       <div id="checklistProgressLabel" class="checklist-progress-label">০/০ কেনা হয়েছে</div>
@@ -743,6 +799,20 @@
       renderNotifDropdown();
     }
   }
+
+  function toggleGearDropdown(){
+    const dd = document.getElementById('gearDropdown');
+    if (!dd) return;
+    dd.classList.toggle('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('gearDropdown');
+    const btn = document.getElementById('headerMenuBtn');
+    if (!dd || !dd.classList.contains('open')) return;
+    if (dd.contains(e.target) || (btn && btn.contains(e.target))) return;
+    dd.classList.remove('open');
+  });
 
   document.addEventListener('click', (e) => {
     const dd = document.getElementById('notifDropdown');
@@ -972,9 +1042,11 @@
     document.getElementById('tabPage2').classList.toggle('active', n===2);
     document.getElementById('tabPage3').classList.toggle('active', n===3);
     document.getElementById('tabPage4').classList.toggle('active', n===4);
+    document.getElementById('tabPage5').classList.toggle('active', n===5);
     if (n === 2) renderSelectDropdown();
     if (n === 3) renderHistoryList();
     if (n === 4) renderTrendList();
+    if (n === 5) renderChecklistPageList();
   }
 
   /* ---------- TAB 1: Price list management ---------- */
@@ -2014,6 +2086,24 @@
     queuePushToSheet();
   }
 
+  // হিস্টরি পেজের + বাটনে ক্লিক করলে খালি (কোনো কেনাকাটা ছাড়া) একটা নতুন
+  // হিস্টরি এন্ট্রি তৈরি হয়, যেটার নিজস্ব চেকলিস্ট থাকে — ঠিক বাকি এন্ট্রিগুলোর মতোই।
+  function createNewChecklistEntry(){
+    const entry = {
+      id: Date.now(),
+      dateLabel: new Date().toLocaleString('bn-BD', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+      grand: 0,
+      categories: [],
+      isChecklistOnly: true
+    };
+    shoppingLog.unshift(entry);
+    saveShoppingLog();
+    renderHistoryList();
+    renderChecklistPageList();
+    queuePushToSheet();
+    openChecklist(entry.id);
+  }
+
   function renderHistoryList(){
     const box = document.getElementById('historyListBox');
     if (!box) return;
@@ -2051,11 +2141,73 @@
         <div id="histManual-${entry.id}">${manualSectionHtml(entry)}</div>
         <div class="hist-actions" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px;">
           <button type="button" class="btn btn-ghost" id="histCopyBtn-${entry.id}" onclick="copyHistoryEntry(${entry.id})">📋 কপি</button>
-          <button type="button" class="btn btn-ghost" onclick="openChecklist(${entry.id})">✅ চেকলিস্ট</button>
+          <button type="button" class="btn btn-ghost" onclick="openChecklist(${entry.id})">➕ যোগ</button>
           <button type="button" class="btn btn-danger" onclick="deleteHistoryEntry(${entry.id})">🗑️ ডিলিট</button>
         </div>
       </details>`;
     }).join('');
+  }
+
+  // চেকলিস্ট পেজ — এখানে শুধু "+" বাটনে ক্লিক করে বানানো (isChecklistOnly)
+  // এন্ট্রিগুলোই দেখানো হয়। বাকি সব এন্ট্রি (সাধারণ বাজার হিসাব) হিস্টরি পেজেই থাকে,
+  // তবে "+" দিয়ে বানানো এন্ট্রিগুলো হিস্টরি পেজেও (সব হিস্টরির অংশ হিসেবে) দেখা যায়।
+  function renderChecklistPageList(){
+    const box = document.getElementById('checklistPageListBox');
+    if (!box) return;
+    const openIds = new Set(
+      Array.from(box.querySelectorAll('details.history-entry[open]')).map(d => d.dataset.entryId)
+    );
+    const clOnlyEntries = shoppingLog.filter(e => e.isChecklistOnly);
+    if (clOnlyEntries.length === 0){
+      box.innerHTML = `<div class="empty-note">এখনো কোনো চেকলিস্ট নেই</div>`;
+      return;
+    }
+    box.innerHTML = clOnlyEntries.map(entry => {
+      const body = entry.categories.map(c => {
+        const rows = c.items.map(it =>
+          it.unit
+            ? `<div class="hist-item"><span>${it.name} — ${it.qty} ${it.unit}</span><span>৳${fmt(it.sub)}</span></div>`
+            : `<div class="hist-item"><span>${it.name}</span><span></span></div>`
+        ).join('');
+        return `<div class="hist-cat">— ${c.category} —</div>${rows}<div class="hist-cat-total">মোট: ৳${fmt(c.catTotal)}</div>`;
+      }).join('');
+      const clItems = entry.checklist ? entry.checklist.items : [];
+      const clDone = clItems.filter(it => it.done).length;
+      const clBadge = clItems.length > 0
+        ? `<span id="clPageBadge-${entry.id}" class="hist-checklist-badge">${clDone}/${clItems.length}</span>`
+        : `<span id="clPageBadge-${entry.id}" class="hist-checklist-badge" style="display:none;"></span>`;
+      const openAttr = openIds.has(String(entry.id)) ? ' open' : '';
+      const displayTotal = entry.grand + manualItemsTotal(entry);
+      return `<details class="history-entry" data-entry-id="${entry.id}"${openAttr}>
+        <summary>
+          <span class="hist-date">
+            <button type="button" class="cl-page-remove-btn" onclick="event.stopPropagation(); event.preventDefault(); removeFromChecklistPage(${entry.id});" aria-label="চেকলিস্ট থেকে সরান">✕</button>
+            ${entry.dateLabel} ${clBadge}
+          </span>
+          <span class="hist-total" id="clPageTotal-${entry.id}">৳${fmt(displayTotal)}</span>
+        </summary>
+        <div class="hist-body">${body}</div>
+        <div id="clPageManual-${entry.id}">${manualSectionHtml(entry)}</div>
+        <div class="hist-actions" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px;">
+          <button type="button" class="btn btn-ghost" id="clPageCopyBtn-${entry.id}" onclick="copyHistoryEntry(${entry.id}, 'clPageCopyBtn-${entry.id}')">📋 কপি</button>
+          <button type="button" class="btn btn-ghost" onclick="openChecklist(${entry.id})">➕ যোগ</button>
+          <button type="button" class="btn btn-danger" onclick="deleteHistoryEntry(${entry.id})">🗑️ ডিলিট</button>
+        </div>
+      </details>`;
+    }).join('');
+  }
+
+  // চেকলিস্ট পেজের "✕" বাটন — শুধু চেকলিস্ট পেজ থেকে এন্ট্রিটি সরিয়ে দেয় (isChecklistOnly ফ্ল্যাগ
+  // বন্ধ করে দিয়ে), কিন্তু এন্ট্রিটা shoppingLog-এ থেকে যায় বলে হিস্টরি পেজে ঠিকই দেখা যাবে।
+  // পুরোপুরি ডিলিট করতে হলে "🗑️ ডিলিট" বাটন ব্যবহার করতে হবে (deleteHistoryEntry)।
+  function removeFromChecklistPage(id){
+    const entry = shoppingLog.find(e => e.id === id);
+    if (!entry) return;
+    if (!confirm('এই চেকলিস্টটি চেকলিস্ট পেজ থেকে সরাতে চান? (হিস্টরিতে থেকে যাবে)')) return;
+    entry.isChecklistOnly = false;
+    saveShoppingLog();
+    renderChecklistPageList();
+    queuePushToSheet();
   }
 
   // চেকলিস্টে ম্যানুয়ালি যোগ করা আইটেমগুলোর সর্বমোট দাম — এটা এন্ট্রির overall
@@ -2087,6 +2239,12 @@
     wrap.innerHTML = manualSectionHtml(entry);
     const totalEl = document.getElementById(`histTotal-${entryId}`);
     if (totalEl) totalEl.textContent = `৳${fmt(entry.grand + manualItemsTotal(entry))}`;
+
+    // চেকলিস্ট পেজেও একই এন্ট্রি থাকলে সেখানকার ম্যানুয়াল সেকশন/টোটালও আপডেট হবে
+    const clWrap = document.getElementById(`clPageManual-${entryId}`);
+    if (clWrap) clWrap.innerHTML = manualSectionHtml(entry);
+    const clTotalEl = document.getElementById(`clPageTotal-${entryId}`);
+    if (clTotalEl) clTotalEl.textContent = `৳${fmt(entry.grand + manualItemsTotal(entry))}`;
   }
 
   /* ---------- হিস্টরি চেকলিস্ট (Phase 1: ডেটা লেয়ার + view/toggle) ----------
@@ -2127,6 +2285,53 @@
     return entry.checklist;
   }
 
+  function startEditChecklistTitle(titleEl){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'checklist-title-input';
+    input.value = entry.dateLabel;
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    // input-টা আবার আগের মতো ক্লিকযোগ্য টাইটেল div-এ ফিরিয়ে আনা হয়, নাহলে
+    // পরের বার id দিয়ে এই এলিমেন্ট আর খুঁজে পাওয়া যাবে না।
+    const restoreTitleEl = () => {
+      const div = document.createElement('div');
+      div.className = 'picker-title';
+      div.id = 'checklistTitleText';
+      div.onclick = () => startEditChecklistTitle(div);
+      input.replaceWith(div);
+      return div;
+    };
+
+    let done = false;
+    const commit = () => {
+      if (done) return;
+      done = true;
+      const val = input.value.trim();
+      if (val) entry.dateLabel = val;
+      restoreTitleEl();
+      saveShoppingLog();
+      renderChecklistModal();
+      renderHistoryList();
+      renderChecklistPageList();
+      queuePushToSheet();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
+      if (e.key === 'Escape'){
+        done = true;
+        restoreTitleEl();
+        renderChecklistModal();
+      }
+    });
+  }
+
   function openChecklist(entryId){
     const entry = shoppingLog.find(e => e.id === entryId);
     if (!entry) return;
@@ -2153,7 +2358,12 @@
     const doneBox = document.getElementById('checklistCompletedList');
     const countEl = document.getElementById('checklistCompletedCount');
     const extraLine = document.getElementById('checklistExtraTotalLine');
+    const grandTotalEl = document.getElementById('checklistGrandTotal');
+    const titleEl = document.getElementById('checklistTitleText');
     if (!entry || !entry.checklist || !pendingBox || !doneBox) return;
+
+    if (titleEl) titleEl.textContent = entry.dateLabel;
+    if (grandTotalEl) grandTotalEl.textContent = `সর্বমোট: ৳${fmt(entry.grand + manualItemsTotal(entry))}`;
 
     const items = entry.checklist.items;
     const pending = items.filter(it => !it.done);
@@ -2204,7 +2414,9 @@
 
     pendingBox.innerHTML = pending.length
       ? groupByCategory(pending)
-      : `<div class="checklist-empty">সব জিনিস কেনা হয়ে গেছে 🎉</div>`;
+      : (items.length === 0
+          ? `<div class="checklist-empty">এখনো কোনো জিনিস যোগ করা হয়নি</div>`
+          : `<div class="checklist-empty">সব জিনিস কেনা হয়ে গেছে 🎉</div>`);
     doneBox.innerHTML = done.length
       ? groupByCategory(done)
       : `<div class="checklist-empty">এখনো কিছু সম্পন্ন হয়নি</div>`;
@@ -2236,16 +2448,18 @@
 
   function updateHistoryChecklistBadge(entryId){
     const badge = document.getElementById(`histChecklistBadge-${entryId}`);
-    if (!badge) return;
+    const clBadge = document.getElementById(`clPageBadge-${entryId}`);
+    if (!badge && !clBadge) return;
     const entry = shoppingLog.find(e => e.id === entryId);
     if (!entry || !entry.checklist || entry.checklist.items.length === 0){
-      badge.style.display = 'none';
+      if (badge) badge.style.display = 'none';
+      if (clBadge) clBadge.style.display = 'none';
       return;
     }
     const total = entry.checklist.items.length;
     const doneCount = entry.checklist.items.filter(it => it.done).length;
-    badge.textContent = `${doneCount}/${total}`;
-    badge.style.display = 'inline-block';
+    if (badge){ badge.textContent = `${doneCount}/${total}`; badge.style.display = 'inline-block'; }
+    if (clBadge){ clBadge.textContent = `${doneCount}/${total}`; clBadge.style.display = 'inline-block'; }
   }
 
   function addChecklistItem(){
@@ -2269,8 +2483,7 @@
     renderChecklistModal();
     renderHistoryManualSection(entry.id);
     queuePushToSheet();
-    nameInput.blur();
-    priceInput.blur();
+    nameInput.focus();
   }
 
   function startEditChecklistName(spanEl, itemId){
@@ -2321,6 +2534,9 @@
   function deleteChecklistItem(itemId){
     const entry = shoppingLog.find(e => e.id === checklistEntryId);
     if (!entry || !entry.checklist) return;
+    const item = entry.checklist.items.find(i => i.id === itemId);
+    if (!item) return;
+    if (!confirm(`"${item.name}" ডিলিট করতে চান?`)) return;
     entry.checklist.items = entry.checklist.items.filter(i => i.id !== itemId);
     saveShoppingLog();
     renderChecklistModal();
@@ -2345,12 +2561,13 @@
     shoppingLog = shoppingLog.filter(e => e.id !== id);
     saveShoppingLog();
     renderHistoryList();
+    renderChecklistPageList();
     queuePushToSheet();
   }
 
-  function copyHistoryEntry(id){
+  function copyHistoryEntry(id, btnIdOverride){
     const entry = shoppingLog.find(e => e.id === id);
-    const btnId = `histCopyBtn-${id}`;
+    const btnId = btnIdOverride || `histCopyBtn-${id}`;
     if (!entry){ flashButtonLabel(btnId, '⚠️ পাওয়া যায়নি'); return; }
     let lines = [];
     lines.push(entry.dateLabel);
@@ -2528,8 +2745,6 @@
       otherItems.forEach(o => lines.push(o.text));
       lines.push('');
     }
-    lines.push('-------------------------');
-    lines.push(`সর্বমোট: ৳${fmt(grand)}${otherItems.length > 0 ? ' (*অন্যান্য বাদে)' : ''}`);
     copyTextToClipboard(lines.join('\n'))
       .then(() => flashButtonLabel('copyNoPriceBtn', '✅ কপি হয়ে গেছে'))
       .catch(() => flashButtonLabel('copyNoPriceBtn', '⚠️ কপি ব্যর্থ হয়েছে'));
