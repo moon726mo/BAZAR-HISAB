@@ -2422,7 +2422,7 @@
       return `<div class="hist-item${it.done ? ' hist-item-done' : ''}"><span><span class="hist-item-check">${check}</span>${it.name}</span><span>৳${fmt(it.price)}</span></div>`;
     }).join('');
     const total = manualItems.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
-    return `<div class="hist-cat">— ➕ —</div>${rows}<div class="hist-cat-total">মোট: ৳${fmt(total)}</div>`;
+    return `<div class="hist-cat">— চেকলিস্ট —</div>${rows}<div class="hist-cat-total">মোট: ৳${fmt(total)}</div>`;
   }
 
   function renderHistoryManualSection(entryId){
@@ -2586,7 +2586,7 @@
     };
 
     // ক্যাটাগরি অনুযায়ী ভাগ করে দেখানো হয় (মূল হিস্টরির ক্যাটাগরি-ক্রম অনুসরণ করে);
-    // ম্যানুয়ালি যোগ করা আইটেমগুলো সবসময় শেষে আলাদা "➕" গ্রুপে থাকে।
+    // ম্যানুয়ালি যোগ করা আইটেমগুলো সবসময় শেষে আলাদা "চেকলিস্ট" গ্রুপে থাকে।
     const groupByCategory = (list) => {
       if (list.length === 0) return '';
       const catOrder = entry.categories.map(c => c.category);
@@ -2601,7 +2601,7 @@
       const orderedCats = catOrder.filter(c => groups[c]);
       Object.keys(groups).forEach(c => { if (!orderedCats.includes(c)) orderedCats.push(c); });
       let html = orderedCats.map(cat => `<div class="cl-cat-label">— ${cat} —</div>${groups[cat].map(rowHtml).join('')}`).join('');
-      if (manualItems.length) html += `<div class="cl-cat-label">— ➕ —</div>${manualItems.map(rowHtml).join('')}`;
+      if (manualItems.length) html += `<div class="cl-cat-label">— চেকলিস্ট —</div>${manualItems.map(rowHtml).join('')}`;
       return html;
     };
 
@@ -2632,7 +2632,7 @@
     if (extraLine){
       if (manualItems.length > 0){
         extraLine.style.display = 'block';
-        extraLine.textContent = `➕ (${manualItems.length}টি) — মোট: ৳${fmt(extraTotal)}`;
+        extraLine.textContent = `চেকলিস্ট (${manualItems.length}টি) — মোট: ৳${fmt(extraTotal)}`;
       } else {
         extraLine.style.display = 'none';
       }
@@ -2777,7 +2777,7 @@
     });
     const manualItems = entry.checklist ? entry.checklist.items.filter(it => it.source === 'manual') : [];
     if (manualItems.length > 0){
-      lines.push('— ➕ —');
+      lines.push('— চেকলিস্ট —');
       manualItems.forEach(it => lines.push(`${it.name} = ৳${fmt(it.price)}`));
       lines.push(`মোট: ৳${fmt(manualItemsTotal(entry))}`);
       lines.push('');
