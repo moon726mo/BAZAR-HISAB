@@ -48,6 +48,25 @@
     font-size:1.5rem; color:var(--green); cursor:pointer; padding:6px 8px; line-height:1;
   }
   .menu-btn:hover{ color:var(--green-2); }
+  .notif-corner{ position:absolute; right:0; top:50%; transform:translateY(-50%); }
+  .notif-corner .menu-btn.notif-btn{ position:static; transform:none; font-size:1.3rem; }
+  .notif-badge{
+    position:absolute; top:3px; right:2px; width:9px; height:9px; border-radius:50%;
+    background:var(--brick); border:1.5px solid #FEFDF9;
+  }
+  .notif-dropdown{
+    position:absolute; top:calc(100% + 8px); right:0; width:270px; max-width:80vw;
+    background:#fff; border-radius:12px; box-shadow:0 12px 34px rgba(0,0,0,0.28);
+    border:1px solid rgba(27,67,50,0.08); padding:10px; z-index:110;
+    display:none; text-align:left;
+  }
+  .notif-dropdown.open{ display:block; }
+  .notif-dropdown-title{ font-size:0.78rem; font-weight:700; color:#5b6b58; margin-bottom:6px; padding:0 2px; }
+  .notif-list{ display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; }
+  .notif-item{ font-size:0.82rem; padding:8px 10px; border-radius:8px; background:#F1EEE2; color:var(--ink); line-height:1.4; }
+  .notif-item.err{ background:#FBEAE6; color:#8a3b2c; }
+  .notif-item .notif-time{ display:block; font-size:0.7rem; color:#9a9a86; margin-top:2px; }
+  .notif-empty{ font-size:0.8rem; color:#9a9a86; text-align:center; padding:12px 4px; }
   header.top .brand{ font-size:2.1rem; font-weight:800; color:var(--green); }
   header.top .brand span{ color:var(--mustard); }
   header.top .sub{ color:#5b6b58; font-size:0.92rem; }
@@ -182,10 +201,17 @@
   .history-entry summary::-webkit-details-marker{ display:none; }
   .history-entry .hist-date{ color:var(--ink); }
   .history-entry .hist-total{ font-family:'JetBrains Mono', monospace; color:var(--green-2); }
+  .hist-checklist-badge{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-weight:700; font-size:0.72rem;
+    color:var(--green-2); background:#EAF3EC; border-radius:20px; padding:2px 8px; margin-left:4px; vertical-align:middle;
+  }
   .hist-body{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); }
   .hist-cat{ font-weight:700; color:var(--green); margin:6px 0 2px; }
   .hist-item{ display:flex; justify-content:space-between; padding:3px 0; font-size:0.92rem; }
   .hist-cat-total{ text-align:right; font-size:0.85rem; color:#5b6b58; margin-top:2px; }
+  .cl-cat-label{ font-weight:600; color:#7a8a76; margin:6px 0 2px; font-size:0.85rem; }
+  .hist-item-done{ text-decoration:line-through; color:#9a9a86; }
+  .hist-item-check{ margin-right:4px; }
 
   .cat-chips{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
   .cat-chip{
@@ -353,7 +379,7 @@
   .picker-item .pr-edit-unit{ width:auto; flex:0 0 auto; padding:5px 6px; font-size:0.82rem; border-radius:6px; font-family:'Hind Siliguri', sans-serif; }
   .cat-del-btn{ background:none; border:none; color:var(--brick); font-size:1rem; cursor:pointer; padding:4px 6px; line-height:1; flex-shrink:0; }
   .cat-del-btn:hover{ opacity:0.7; }
-  #categoryPickerList .picker-item{ touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+  #categoryPickerList .picker-item{ touch-action:none; user-select:none; -webkit-user-select:none; }
   #categoryPickerList .picker-item.cat-dragging{
     background:#FCF6E0; box-shadow:0 6px 16px var(--shadow); z-index:5;
     border-radius:12px; border-bottom-color:transparent;
@@ -410,6 +436,48 @@
   #categoryPickerModal.picker-overlay{ align-items:stretch; padding-top:0; }
   #categoryPickerModal .picker-sheet{ max-height:100vh; max-height:100dvh; height:100vh; height:100dvh; border-radius:0; }
   #categoryPickerModal .picker-list{ flex:1 1 auto; }
+  #checklistModal.picker-overlay{ align-items:stretch; padding-top:0; }
+  #checklistModal .picker-sheet{ max-height:100vh; max-height:100dvh; height:100vh; height:100dvh; border-radius:0; overflow-y:auto; }
+  #checklistModal .picker-list{ flex:none; }
+  .checklist-item{
+    display:flex; align-items:center; gap:10px; padding:12px 8px;
+    border-radius:12px; border-bottom:1px dashed var(--line);
+  }
+  .checklist-item:last-child{ border-bottom:none; }
+  .checklist-item input[type="checkbox"]{ width:20px; height:20px; flex-shrink:0; accent-color:var(--green); cursor:pointer; }
+  .checklist-item .cl-name{ flex:1; font-weight:600; color:var(--ink); }
+  .checklist-item.done .cl-name{ text-decoration:line-through; color:#9a9a86; font-weight:500; }
+  .cl-name-input{
+    flex:1; min-width:0; padding:4px 6px; border:1.5px solid var(--green-2); border-radius:6px;
+    font-size:0.92rem; font-weight:600; color:var(--ink); background:#fff;
+  }
+  .checklist-item .cl-meta{ font-size:0.8rem; color:#7a8a76; white-space:nowrap; }
+  .cl-price-input{
+    width:64px; padding:4px 6px; border:1.5px solid var(--line); border-radius:6px;
+    font-size:0.82rem; text-align:right; color:var(--ink); background:#fff; flex-shrink:0;
+  }
+  .cl-price-input:focus{ border-color:var(--green-2); }
+  .checklist-completed-wrap{
+    border-top:1.5px solid var(--line); margin:0 10px; padding:4px 0 calc(10px + env(safe-area-inset-bottom));
+  }
+  .checklist-completed-summary{
+    padding:10px 6px; font-weight:700; color:var(--green-2); cursor:pointer; font-size:0.92rem; list-style:none;
+  }
+  .checklist-completed-summary::-webkit-details-marker{ display:none; }
+  .checklist-empty{ padding:20px 16px; text-align:center; color:#9a9a86; font-style:italic; }
+  .checklist-extra-total{
+    margin:0 16px 10px; padding:9px 14px; border-radius:10px; background:#EAF3EC;
+    color:var(--green-2); font-weight:700; font-size:0.88rem; text-align:center;
+  }
+  .checklist-item .cl-del-btn{
+    background:none; border:none; color:var(--brick); font-size:1rem; cursor:pointer;
+    padding:4px 6px; line-height:1; flex-shrink:0;
+  }
+  .checklist-item .cl-del-btn:hover{ opacity:0.7; }
+  .checklist-progress-wrap{ padding:2px 16px 10px; }
+  .checklist-progress-track{ background:#EAE6D6; border-radius:8px; height:8px; overflow:hidden; }
+  .checklist-progress-bar{ background:var(--green); height:100%; width:0%; border-radius:8px; transition:width .25s ease; }
+  .checklist-progress-label{ margin-top:6px; font-size:0.8rem; color:#5b6b58; font-weight:600; text-align:center; }
 </style>
 </head>
 <body>
@@ -418,7 +486,19 @@
   <header class="top">
     <button type="button" class="menu-btn" id="headerSyncBtn" onclick="openSyncSettings()" aria-label="সিঙ্ক">⚙️</button>
     <div class="brand">🧺 বাজার <span>হিসাব</span></div>
+    <div class="notif-corner">
+      <button type="button" class="menu-btn notif-btn" id="notifBtn" onclick="toggleNotifDropdown()" aria-label="নোটিফিকেশন">
+        🔔
+        <span id="notifBadge" class="notif-badge" style="display:none;"></span>
+      </button>
+      <div id="notifDropdown" class="notif-dropdown">
+        <div class="notif-dropdown-title">সাম্প্রতিক সিঙ্ক মেসেজ</div>
+        <div id="notifList" class="notif-list"></div>
+      </div>
+    </div>
   </header>
+
+
 
   <div id="syncBar" class="sync-toast">
     <span id="syncStatus" class="sync-status">🔌 সিঙ্ক সেট করা নেই</span>
@@ -559,6 +639,32 @@
   </div>
 </div>
 
+<div id="checklistModal" class="picker-overlay" onclick="if(event.target===this) closeChecklistModal()">
+  <div class="picker-sheet">
+    <div class="picker-head">
+      <div class="picker-title">✅ চেকলিস্ট</div>
+      <button type="button" class="picker-close" onclick="closeChecklistModal()">✕</button>
+    </div>
+    <div id="checklistProgressWrap" class="checklist-progress-wrap">
+      <div class="checklist-progress-track"><div id="checklistProgressBar" class="checklist-progress-bar"></div></div>
+      <div id="checklistProgressLabel" class="checklist-progress-label">০/০ কেনা হয়েছে</div>
+    </div>
+    <div class="picker-search-wrap" style="display:flex; gap:8px;">
+      <input type="text" id="checklistNewName" class="picker-search" autocomplete="off"
+        placeholder="নতুন জিনিসের নাম..." style="flex:1.4;">
+      <input type="number" id="checklistNewPrice" class="picker-search" min="0" step="0.01"
+        placeholder="দাম (ঐচ্ছিক)" style="flex:1;">
+      <button type="button" class="btn btn-primary" style="flex-shrink:0;" onclick="addChecklistItem()">➕ যোগ</button>
+    </div>
+    <div id="checklistExtraTotalLine" class="checklist-extra-total" style="display:none;"></div>
+    <div id="checklistPendingList" class="picker-list"></div>
+    <details id="checklistCompletedWrap" class="checklist-completed-wrap">
+      <summary class="checklist-completed-summary">✅ সম্পন্ন (<span id="checklistCompletedCount">0</span>)</summary>
+      <div id="checklistCompletedList" class="picker-list"></div>
+    </details>
+  </div>
+</div>
+
 <script>
   const PRICE_KEY = 'bazarHisab_priceList_v2';
   const HISTORY_KEY = 'bazarHisab_priceHistory_v1';
@@ -591,10 +697,73 @@
   let isPushing = false;
   let syncToastTimer = null;
 
+  /* ---------- নোটিফিকেশন বেল (সিঙ্ক মেসেজ হিস্টরি) ----------
+     শেষ ৩টা মেসেজ লোকালি (শুধু এই সেশনে) জমা থাকে — কোনো সার্ভারে সিঙ্ক হয় না।
+     সাধারণ/সাকসেস মেসেজ নীরবে এখানে জমা হয় (কাজের মাঝে বিরক্ত করবে না);
+     শুধু এরর/অফলাইন (urgent) মেসেজ হলে নিচে toast দেখাবে + বেলে লাল ব্যাজ জ্বলবে। */
+  let notifHistory = [];
+  const NOTIF_LIMIT = 3;
+  let notifHasUrgentUnread = false;
+
+  function pushNotif(text, kind){
+    notifHistory.unshift({ text, kind: kind || '', time: nowTimeLabel() });
+    if (notifHistory.length > NOTIF_LIMIT) notifHistory = notifHistory.slice(0, NOTIF_LIMIT);
+    if (kind === 'err') notifHasUrgentUnread = true;
+    renderNotifDropdown();
+    updateNotifBadge();
+  }
+
+  function updateNotifBadge(){
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.style.display = notifHasUrgentUnread ? 'block' : 'none';
+  }
+
+  function renderNotifDropdown(){
+    const list = document.getElementById('notifList');
+    if (!list) return;
+    if (notifHistory.length === 0){
+      list.innerHTML = `<div class="notif-empty">এখনো কোনো মেসেজ নেই</div>`;
+      return;
+    }
+    list.innerHTML = notifHistory.map(n => `
+      <div class="notif-item${n.kind === 'err' ? ' err' : ''}">
+        <span>${n.text}</span>
+        <span class="notif-time">${n.time}</span>
+      </div>`).join('');
+  }
+
+  function toggleNotifDropdown(){
+    const dd = document.getElementById('notifDropdown');
+    if (!dd) return;
+    const opening = !dd.classList.contains('open');
+    dd.classList.toggle('open', opening);
+    if (opening){
+      notifHasUrgentUnread = false; // দেখে ফেলা মানে ব্যাজ ক্লিয়ার, পুরনো মেসেজগুলো তালিকায় থেকেই যাবে
+      updateNotifBadge();
+      renderNotifDropdown();
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('notifDropdown');
+    const btn = document.getElementById('notifBtn');
+    if (!dd || !dd.classList.contains('open')) return;
+    if (dd.contains(e.target) || (btn && btn.contains(e.target))) return;
+    dd.classList.remove('open');
+  });
+
   function setSyncStatus(text, kind){
+    pushNotif(text, kind);
+
     const bar = document.getElementById('syncBar');
     const el = document.getElementById('syncStatus');
     if (!el || !bar) return;
+
+    if (kind !== 'err'){
+      // সাধারণ/সাকসেস মেসেজ — শুধু বেল আইকনে জমা থাকবে, নিচে toast দেখিয়ে বিরক্ত করবে না
+      return;
+    }
+
     el.textContent = text;
     el.className = 'sync-status' + (kind ? (' ' + kind) : '');
     bar.classList.add('show');
@@ -643,6 +812,21 @@
       const incomingList = data.priceList || {};
       const incomingHistory = data.priceHistory || {};
       const incomingShoppingLog = data.shoppingLog || [];
+
+      // চেকলিস্টে ম্যানুয়ালি যোগ করা আইটেমগুলো যদি শিট থেকে ফেরত না আসে, অথবা
+      // পুশ শেষ হওয়ার আগেই পুল হয়ে যায় (রেস কন্ডিশন — শিটে তখনও পুরনো ডেটা),
+      // তাহলে সেগুলো যেন হারিয়ে না যায় — যে ভার্সনে বেশি আইটেম আছে সেটাই রাখা হচ্ছে।
+      const oldChecklistById = {};
+      shoppingLog.forEach(e => { if (e.checklist) oldChecklistById[e.id] = e.checklist; });
+      incomingShoppingLog.forEach(e => {
+        const oldChecklist = oldChecklistById[e.id];
+        if (!oldChecklist) return;
+        const oldCount = oldChecklist.items ? oldChecklist.items.length : 0;
+        const newCount = (e.checklist && e.checklist.items) ? e.checklist.items.length : 0;
+        if (oldCount > newCount) {
+          e.checklist = oldChecklist;
+        }
+      });
 
       // Sheet is treated as the source of truth on open, so app matches
       // whatever is currently in the sheet (empty sheet clears local list too,
@@ -977,6 +1161,7 @@
   }
 
   function pickCategory(name){
+    if (catDragJustMoved){ catDragJustMoved = false; return; } // ড্র্যাগ করে ছাড়ার পরের ক্লিক ইভেন্ট — সিলেক্ট করা চলবে না
     if (categoryPickerFromShop){
       setItemPickerCatFilter(name);
     } else {
@@ -1832,6 +2017,11 @@
   function renderHistoryList(){
     const box = document.getElementById('historyListBox');
     if (!box) return;
+    // কোন কোন এন্ট্রি এখন খোলা আছে সেটা মনে রাখা হচ্ছে, যাতে রি-রেন্ডারের পর
+    // (যেমন ব্যাকগ্রাউন্ডে শিট-পুল শেষ হলে) খোলা এন্ট্রি হুট করে বন্ধ হয়ে না যায়।
+    const openIds = new Set(
+      Array.from(box.querySelectorAll('details.history-entry[open]')).map(d => d.dataset.entryId)
+    );
     if (shoppingLog.length === 0){
       box.innerHTML = `<div class="empty-note">এখনো কোনো হিস্টরি নেই</div>`;
       return;
@@ -1845,18 +2035,309 @@
         ).join('');
         return `<div class="hist-cat">— ${c.category} —</div>${rows}<div class="hist-cat-total">মোট: ৳${fmt(c.catTotal)}</div>`;
       }).join('');
-      return `<details class="history-entry">
+      const clItems = entry.checklist ? entry.checklist.items : [];
+      const clDone = clItems.filter(it => it.done).length;
+      const clBadge = clItems.length > 0
+        ? `<span id="histChecklistBadge-${entry.id}" class="hist-checklist-badge">${clDone}/${clItems.length}</span>`
+        : `<span id="histChecklistBadge-${entry.id}" class="hist-checklist-badge" style="display:none;"></span>`;
+      const openAttr = openIds.has(String(entry.id)) ? ' open' : '';
+      const displayTotal = entry.grand + manualItemsTotal(entry);
+      return `<details class="history-entry" data-entry-id="${entry.id}"${openAttr}>
         <summary>
-          <span class="hist-date">${entry.dateLabel}</span>
-          <span class="hist-total">৳${fmt(entry.grand)}</span>
+          <span class="hist-date">${entry.dateLabel} ${clBadge}</span>
+          <span class="hist-total" id="histTotal-${entry.id}">৳${fmt(displayTotal)}</span>
         </summary>
         <div class="hist-body">${body}</div>
-        <div class="hist-actions" style="display:flex; gap:8px; margin-top:8px;">
-          <button type="button" class="btn btn-ghost" id="histCopyBtn-${entry.id}" style="flex:1;" onclick="copyHistoryEntry(${entry.id})">📋 কপি</button>
-          <button type="button" class="btn btn-danger" style="flex:1;" onclick="deleteHistoryEntry(${entry.id})">🗑️ ডিলিট</button>
+        <div id="histManual-${entry.id}">${manualSectionHtml(entry)}</div>
+        <div class="hist-actions" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px;">
+          <button type="button" class="btn btn-ghost" id="histCopyBtn-${entry.id}" onclick="copyHistoryEntry(${entry.id})">📋 কপি</button>
+          <button type="button" class="btn btn-ghost" onclick="openChecklist(${entry.id})">✅ চেকলিস্ট</button>
+          <button type="button" class="btn btn-danger" onclick="deleteHistoryEntry(${entry.id})">🗑️ ডিলিট</button>
         </div>
       </details>`;
     }).join('');
+  }
+
+  // চেকলিস্টে ম্যানুয়ালি যোগ করা আইটেমগুলোর সর্বমোট দাম — এটা এন্ট্রির overall
+  // সর্বমোটের (hist-total) সাথে যোগ হয়ে দেখানো হয়।
+  function manualItemsTotal(entry){
+    if (!entry.checklist) return 0;
+    return entry.checklist.items
+      .filter(it => it.source === 'manual')
+      .reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
+  }
+
+  // চেকলিস্টে ম্যানুয়ালি যোগ করা (নতুন) আইটেমগুলো — হিস্টরি লিস্টেই সরাসরি দেখানোর জন্য,
+  // মোডাল না খুলেও দেখা যায়। toggle/add/delete হলে renderHistoryManualSection() দিয়ে রিফ্রেশ হয়।
+  function manualSectionHtml(entry){
+    const manualItems = entry.checklist ? entry.checklist.items.filter(it => it.source === 'manual') : [];
+    if (manualItems.length === 0) return '';
+    const rows = manualItems.map(it => {
+      const check = it.done ? '☑ ' : '☐ ';
+      return `<div class="hist-item${it.done ? ' hist-item-done' : ''}"><span><span class="hist-item-check">${check}</span>${it.name}</span><span>৳${fmt(it.price)}</span></div>`;
+    }).join('');
+    const total = manualItems.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
+    return `<div class="hist-cat">— ➕ নতুন যোগ —</div>${rows}<div class="hist-cat-total">মোট: ৳${fmt(total)}</div>`;
+  }
+
+  function renderHistoryManualSection(entryId){
+    const wrap = document.getElementById(`histManual-${entryId}`);
+    const entry = shoppingLog.find(e => e.id === entryId);
+    if (!wrap || !entry) return;
+    wrap.innerHTML = manualSectionHtml(entry);
+    const totalEl = document.getElementById(`histTotal-${entryId}`);
+    if (totalEl) totalEl.textContent = `৳${fmt(entry.grand + manualItemsTotal(entry))}`;
+  }
+
+  /* ---------- হিস্টরি চেকলিস্ট (Phase 1: ডেটা লেয়ার + view/toggle) ----------
+     এন্ট্রির মূল categories ডেটা টাচ না করে entry.checklist.items[] আলাদাভাবে তৈরি হয়,
+     যাতে হিস্টরির মূল রেকর্ড (তখন কী কেনা হয়েছিল) অপরিবর্তিত থাকে। */
+  let checklistEntryId = null;
+
+  function ensureChecklist(entry){
+    if (!entry.checklist){
+      let idx = 0;
+      const items = [];
+      entry.categories.forEach(c => {
+        c.items.forEach(it => {
+          idx++;
+          items.push({
+            id: 'cl_' + entry.id + '_' + idx,
+            name: it.name,
+            qty: it.qty,
+            unit: it.unit,
+            price: it.price,
+            done: false,
+            source: 'history',
+            category: c.category
+          });
+        });
+      });
+      entry.checklist = { items, extraTotal: 0 };
+    } else {
+      // পুরনো (আপডেটের আগে সেভ হওয়া) checklist-এ category ফিল্ড না থাকলে
+      // মূল categories থেকে মিলিয়ে সেটা যোগ করে দেওয়া হচ্ছে (এক-বার মাইগ্রেশন)।
+      entry.checklist.items.forEach(it => {
+        if (!it.category && it.source === 'history'){
+          const match = entry.categories.find(c => c.items.some(ci => ci.name === it.name));
+          if (match) it.category = match.category;
+        }
+      });
+    }
+    return entry.checklist;
+  }
+
+  function openChecklist(entryId){
+    const entry = shoppingLog.find(e => e.id === entryId);
+    if (!entry) return;
+    ensureChecklist(entry);
+    checklistEntryId = entryId;
+    saveShoppingLog();
+    document.getElementById('checklistCompletedWrap').open = false;
+    document.getElementById('checklistNewName').value = '';
+    document.getElementById('checklistNewPrice').value = '';
+    renderChecklistModal();
+    document.getElementById('checklistModal').classList.add('open');
+    document.body.classList.add('no-scroll');
+  }
+
+  function closeChecklistModal(){
+    document.getElementById('checklistModal').classList.remove('open');
+    document.body.classList.remove('no-scroll');
+    checklistEntryId = null;
+  }
+
+  function renderChecklistModal(){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    const pendingBox = document.getElementById('checklistPendingList');
+    const doneBox = document.getElementById('checklistCompletedList');
+    const countEl = document.getElementById('checklistCompletedCount');
+    const extraLine = document.getElementById('checklistExtraTotalLine');
+    if (!entry || !entry.checklist || !pendingBox || !doneBox) return;
+
+    const items = entry.checklist.items;
+    const pending = items.filter(it => !it.done);
+    const done = items.filter(it => it.done);
+
+    const rowHtml = (it) => {
+      const metaParts = [];
+      if (it.qty) metaParts.push(`${it.qty} ${it.unit || ''}`.trim());
+      const meta = metaParts.length ? `<span class="cl-meta">${metaParts.join(' · ')}</span>` : '';
+      const safeId = it.id.replace(/'/g,"\\'");
+      const nameHtml = it.source === 'manual'
+        ? `<span class="cl-name" ondblclick="event.stopPropagation(); startEditChecklistName(this, '${safeId}')">${it.name}</span>`
+        : `<span class="cl-name">${it.name}</span>`;
+      const priceHtml = it.source === 'manual'
+        ? `<input type="number" class="cl-price-input" placeholder="দাম" min="0" step="0.01" value="${it.price ? it.price : ''}" onclick="event.stopPropagation(); this.select();" onfocus="this.select()" onchange="updateChecklistItemPrice('${safeId}', this.value)">`
+        : (it.price ? `<span class="cl-meta">৳${fmt(it.price)}</span>` : '');
+      const delBtn = it.source === 'manual'
+        ? `<button type="button" class="cl-del-btn" title="মুছুন" onclick="event.stopPropagation(); deleteChecklistItem('${safeId}')">✕</button>`
+        : '';
+      return `<div class="checklist-item${it.done ? ' done' : ''}">
+        <input type="checkbox" ${it.done ? 'checked' : ''} onchange="toggleChecklistItem('${safeId}')">
+        ${nameHtml}
+        ${meta}
+        ${priceHtml}
+        ${delBtn}
+      </div>`;
+    };
+
+    // ক্যাটাগরি অনুযায়ী ভাগ করে দেখানো হয় (মূল হিস্টরির ক্যাটাগরি-ক্রম অনুসরণ করে);
+    // ম্যানুয়ালি যোগ করা আইটেমগুলো সবসময় শেষে আলাদা "➕ নতুন যোগ" গ্রুপে থাকে।
+    const groupByCategory = (list) => {
+      if (list.length === 0) return '';
+      const catOrder = entry.categories.map(c => c.category);
+      const groups = {};
+      const manualItems = [];
+      list.forEach(it => {
+        if (it.source === 'manual'){ manualItems.push(it); return; }
+        const cat = it.category || 'অন্যান্য';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(it);
+      });
+      const orderedCats = catOrder.filter(c => groups[c]);
+      Object.keys(groups).forEach(c => { if (!orderedCats.includes(c)) orderedCats.push(c); });
+      let html = orderedCats.map(cat => `<div class="cl-cat-label">— ${cat} —</div>${groups[cat].map(rowHtml).join('')}`).join('');
+      if (manualItems.length) html += `<div class="cl-cat-label">— ➕ নতুন যোগ —</div>${manualItems.map(rowHtml).join('')}`;
+      return html;
+    };
+
+    pendingBox.innerHTML = pending.length
+      ? groupByCategory(pending)
+      : `<div class="checklist-empty">সব জিনিস কেনা হয়ে গেছে 🎉</div>`;
+    doneBox.innerHTML = done.length
+      ? groupByCategory(done)
+      : `<div class="checklist-empty">এখনো কিছু সম্পন্ন হয়নি</div>`;
+    countEl.textContent = done.length;
+
+    // প্রোগ্রেস বার/লেবেল ("X/Y কেনা হয়েছে")
+    const progressBar = document.getElementById('checklistProgressBar');
+    const progressLabel = document.getElementById('checklistProgressLabel');
+    const total = items.length;
+    const pct = total > 0 ? Math.round((done.length / total) * 100) : 0;
+    if (progressBar) progressBar.style.width = pct + '%';
+    if (progressLabel) progressLabel.textContent = `${done.length}/${total} কেনা হয়েছে`;
+
+    // হিস্টরি লিস্টের কার্ডেও (পপআপ ছাড়াই) ছোট প্রোগ্রেস ব্যাজ আপডেট
+    updateHistoryChecklistBadge(entry.id);
+
+    // ম্যানুয়ালি যোগ করা আইটেমগুলোর দাম — মূল হিস্টরির সর্বমোট থেকে আলাদা, শুধু এখানেই দেখানো হয়
+    const manualItems = items.filter(it => it.source === 'manual');
+    const extraTotal = manualItems.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
+    if (extraLine){
+      if (manualItems.length > 0){
+        extraLine.style.display = 'block';
+        extraLine.textContent = `➕ নতুন যোগ (${manualItems.length}টি) — মোট: ৳${fmt(extraTotal)}`;
+      } else {
+        extraLine.style.display = 'none';
+      }
+    }
+  }
+
+  function updateHistoryChecklistBadge(entryId){
+    const badge = document.getElementById(`histChecklistBadge-${entryId}`);
+    if (!badge) return;
+    const entry = shoppingLog.find(e => e.id === entryId);
+    if (!entry || !entry.checklist || entry.checklist.items.length === 0){
+      badge.style.display = 'none';
+      return;
+    }
+    const total = entry.checklist.items.length;
+    const doneCount = entry.checklist.items.filter(it => it.done).length;
+    badge.textContent = `${doneCount}/${total}`;
+    badge.style.display = 'inline-block';
+  }
+
+  function addChecklistItem(){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry || !entry.checklist) return;
+    const nameInput = document.getElementById('checklistNewName');
+    const priceInput = document.getElementById('checklistNewPrice');
+    const name = nameInput.value.trim();
+    if (!name){ nameInput.focus(); return; }
+    const priceVal = parseFloat(priceInput.value);
+    const price = isNaN(priceVal) ? 0 : priceVal;
+
+    entry.checklist.items.push({
+      id: 'cl_' + entry.id + '_m' + Date.now(),
+      name, qty:'', unit:'', price, done:false, source:'manual'
+    });
+
+    nameInput.value = '';
+    priceInput.value = '';
+    saveShoppingLog();
+    renderChecklistModal();
+    renderHistoryManualSection(entry.id);
+    queuePushToSheet();
+    nameInput.blur();
+    priceInput.blur();
+  }
+
+  function startEditChecklistName(spanEl, itemId){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry || !entry.checklist) return;
+    const item = entry.checklist.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'cl-name-input';
+    input.value = item.name;
+    spanEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const commit = () => {
+      if (done) return;
+      done = true;
+      const val = input.value.trim();
+      if (val) item.name = val;
+      saveShoppingLog();
+      renderChecklistModal();
+      renderHistoryManualSection(entry.id);
+      queuePushToSheet();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
+      if (e.key === 'Escape'){ done = true; renderChecklistModal(); }
+    });
+  }
+
+  function updateChecklistItemPrice(itemId, value){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry || !entry.checklist) return;
+    const item = entry.checklist.items.find(i => i.id === itemId);
+    if (!item) return;
+    const val = parseFloat(value);
+    item.price = isNaN(val) ? 0 : val;
+    saveShoppingLog();
+    renderChecklistModal();
+    renderHistoryManualSection(entry.id);
+    queuePushToSheet();
+  }
+
+  function deleteChecklistItem(itemId){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry || !entry.checklist) return;
+    entry.checklist.items = entry.checklist.items.filter(i => i.id !== itemId);
+    saveShoppingLog();
+    renderChecklistModal();
+    renderHistoryManualSection(entry.id);
+    queuePushToSheet();
+  }
+
+  function toggleChecklistItem(itemId){
+    const entry = shoppingLog.find(e => e.id === checklistEntryId);
+    if (!entry || !entry.checklist) return;
+    const item = entry.checklist.items.find(i => i.id === itemId);
+    if (!item) return;
+    item.done = !item.done;
+    saveShoppingLog();
+    renderChecklistModal();
+    renderHistoryManualSection(entry.id);
+    queuePushToSheet();
   }
 
   function deleteHistoryEntry(id){
@@ -1884,8 +2365,15 @@
       if (c.catTotal > 0) lines.push(`মোট: ৳${fmt(c.catTotal)}`);
       lines.push('');
     });
+    const manualItems = entry.checklist ? entry.checklist.items.filter(it => it.source === 'manual') : [];
+    if (manualItems.length > 0){
+      lines.push('— ➕ নতুন যোগ —');
+      manualItems.forEach(it => lines.push(`${it.name} = ৳${fmt(it.price)}`));
+      lines.push(`মোট: ৳${fmt(manualItemsTotal(entry))}`);
+      lines.push('');
+    }
     lines.push('-------------------------');
-    lines.push(`সর্বমোট: ৳${fmt(entry.grand)}`);
+    lines.push(`সর্বমোট: ৳${fmt(entry.grand + manualItemsTotal(entry))}`);
     copyTextToClipboard(lines.join('\n'))
       .then(() => flashButtonLabel(btnId, '✅ কপি হয়ে গেছে'))
       .catch(() => flashButtonLabel(btnId, '⚠️ কপি ব্যর্থ হয়েছে'));
